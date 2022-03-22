@@ -2,6 +2,8 @@ plugins {
     id 'java'
 }
 
+apply plugin: "groovy"
+
 group 'net.lunapiece'
 version '1.0-SNAPSHOT'
 
@@ -13,6 +15,15 @@ dependencies {
     implementation 'org.reflections:reflections:0.10.2'
     compileOnly 'org.projectlombok:lombok:1.18.22'
     annotationProcessor 'org.projectlombok:lombok:1.18.22'
+
+    implementation "org.codehaus.groovy:groovy:3.0.10"
+    testImplementation platform("org.spockframework:spock-bom:2.1-groovy-3.0")
+    testImplementation "org.spockframework:spock-core"
+    testImplementation "org.spockframework:spock-junit4"
+
+    testImplementation "org.hamcrest:hamcrest-core:2.2"
+    testRuntimeOnly "net.bytebuddy:byte-buddy:1.12.8"
+    testRuntimeOnly "org.objenesis:objenesis:3.2"
 
     testCompileOnly 'org.projectlombok:lombok:1.18.22'
     testAnnotationProcessor 'org.projectlombok:lombok:1.18.22'
