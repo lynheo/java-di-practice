@@ -3,6 +3,6 @@
 
 - [x] : Autowired Annotation
 - [x] : Component Annotation
-- [ ] : Support Qualifier
+- [X] : Support Qualifier
 - [ ] : Support Constructor Injection
 - [ ] : Remove Reflections Library

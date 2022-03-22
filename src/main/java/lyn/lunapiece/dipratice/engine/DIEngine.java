@@ -2,8 +2,10 @@ package lyn.lunapiece.dipratice.engine;
 
 import lyn.lunapiece.dipratice.engine.annotation.LynAutowired;
 import lyn.lunapiece.dipratice.engine.annotation.LynComponent;
+import lyn.lunapiece.dipratice.engine.annotation.LynQualified;
 import org.reflections.Reflections;
 
+import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.util.*;
 
@@ -26,17 +28,25 @@ public class DIEngine {
     }
 
     public <T> T createInstance(Class<T> clazz) {
+        var beanName = getClassBeanName(clazz);
+        return (T) createInstanceByName(beanName);
+    }
+
+    private Object createInstanceByName(String beanName) {
         try {
-            var constructors = clazz.getDeclaredConstructors();
+            var targetClass = beanClassesNameMap.get(beanName);
+
+            var constructors = targetClass.getDeclaredConstructors();
             if (constructors.length != 1) {
                 throw new RuntimeException("This sample required only default constructor.");
             }
+
             var newInstance = constructors[0].newInstance();
-            Arrays.stream(clazz.getDeclaredFields())
+            Arrays.stream(targetClass.getDeclaredFields())
                     .forEach(field -> {
                                 var annotation = field.getAnnotation(LynAutowired.class);
-                                if ((annotation != null) && beanClasses.contains(field.getType())) {
-                                    var fieldInstance = createInstance(field.getType());
+                                if ((annotation != null) && beanClassesNameMap.containsKey(beanName)) {
+                                    var fieldInstance = createInstanceByName(getFieldBeanName(field));
                                     try {
                                         var beforeAccesssible = Modifier.isPrivate(field.getModifiers());
                                         field.setAccessible(true);
@@ -49,13 +59,32 @@ public class DIEngine {
                             }
                     );
 
-            return (T) newInstance;
+            return newInstance;
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
     }
 
+    private String getFieldBeanName(Field field) {
+        var qualifiedAnnotation = field.getAnnotation(LynQualified.class);
+        if (qualifiedAnnotation == null) {
+            return getClassBeanName(field.getType());
+        } else {
+            return qualifiedAnnotation.beanName();
+        }
+    }
+
     private String getClassBeanName(Class<?> clazz) {
+        var beanName = clazz.getAnnotation(LynComponent.class).beanName();
+
+        if (beanName.isEmpty()) {
+            return clazz.getSimpleName().toLowerCase(Locale.US);
+        } else {
+            return beanName;
+        }
+    }
+
+    private String makeClassBeanName(Class<?> clazz) {
         return clazz.getSimpleName().toLowerCase(Locale.US);
     }
 }
