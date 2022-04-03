@@ -4,5 +4,5 @@
 - [x] : Autowired Annotation
 - [x] : Component Annotation
 - [X] : Support Qualifier
-- [ ] : Support Constructor Injection
+- [X] : Support Constructor Injection
 - [ ] : Remove Reflections Library
