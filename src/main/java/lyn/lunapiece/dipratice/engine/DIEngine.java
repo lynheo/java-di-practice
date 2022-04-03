@@ -7,6 +7,7 @@ import org.reflections.Reflections;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
+import java.lang.reflect.Parameter;
 import java.util.*;
 
 import static org.reflections.scanners.Scanners.SubTypes;
@@ -41,25 +42,39 @@ public class DIEngine {
                 throw new RuntimeException("This sample required only default constructor.");
             }
 
-            var newInstance = constructors[0].newInstance();
-            Arrays.stream(targetClass.getDeclaredFields())
-                    .forEach(field -> {
-                                var annotation = field.getAnnotation(LynAutowired.class);
-                                if ((annotation != null) && beanClassesNameMap.containsKey(beanName)) {
-                                    var fieldInstance = createInstanceByName(getFieldBeanName(field));
-                                    try {
-                                        var beforeAccesssible = Modifier.isPrivate(field.getModifiers());
-                                        field.setAccessible(true);
-                                        field.set(newInstance, fieldInstance);
-                                        field.setAccessible(beforeAccesssible);
-                                    } catch (IllegalAccessException e) {
-                                        e.printStackTrace();
+            if (beanClassesNameMap.containsKey(beanName) == false) {
+                throw new RuntimeException(String.format("%s is not bean", beanName));
+            }
+
+            var onlyOneConstructor = constructors[0];
+            if (onlyOneConstructor.getParameterCount() == 0) { //default constructor
+                var newInstance = onlyOneConstructor.newInstance();
+                Arrays.stream(targetClass.getDeclaredFields())
+                        .forEach(field -> {
+                                    var annotation = field.getAnnotation(LynAutowired.class);
+                                    if (annotation != null) {
+                                        var fieldInstance = createInstanceByName(getFieldBeanName(field));
+                                        try {
+                                            var beforeAccesssible = Modifier.isPrivate(field.getModifiers());
+                                            field.setAccessible(true);
+                                            field.set(newInstance, fieldInstance);
+                                            field.setAccessible(beforeAccesssible);
+                                        } catch (IllegalAccessException e) {
+                                            e.printStackTrace();
+                                        }
                                     }
                                 }
-                            }
-                    );
+                        );
 
-            return newInstance;
+                return newInstance;
+            } else {
+                var constructorParams = new Object[onlyOneConstructor.getParameterCount()];
+                for (var i = 0; i < onlyOneConstructor.getParameterCount(); ++i) {
+                    constructorParams[i] = createInstanceByName(getParameterBeanName(onlyOneConstructor.getParameters()[i]));
+                }
+
+                return onlyOneConstructor.newInstance(constructorParams);
+            }
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -74,8 +89,20 @@ public class DIEngine {
         }
     }
 
+    private String getParameterBeanName(Parameter parameter) {
+        var qualifiedAnnotation = parameter.getAnnotation(LynQualified.class);
+        if (qualifiedAnnotation == null) {
+            return getClassBeanName(parameter.getType());
+        } else {
+            return qualifiedAnnotation.beanName();
+        }
+    }
+
     private String getClassBeanName(Class<?> clazz) {
         var beanName = clazz.getAnnotation(LynComponent.class).beanName();
+        if (beanName == null) {
+            throw new RuntimeException(String.format("%s is not bean", clazz.getSimpleName()));
+        }
 
         if (beanName.isEmpty()) {
             return clazz.getSimpleName().toLowerCase(Locale.US);
